@@ -17,7 +17,7 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 TARGET_USER = "elonmusk"
-CHECK_INTERVAL_SECONDS = 300  # 5 minutos
+CHECK_INTERVAL_SECONDS = 1800  # 30 minutos
 
 def get_last_saved_tweet_id(username: str) -> str | None:
     response = (
