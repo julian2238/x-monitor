@@ -15,7 +15,12 @@ from model import (
     parse_datetime,
     save_prediction,
 )
-from trackings import fetch_trackings, normalize_tracking, sync_trackings
+from trackings import (
+    ensure_buckets,
+    fetch_trackings,
+    normalize_tracking,
+    sync_trackings,
+)
 
 load_dotenv()
 
@@ -49,10 +54,10 @@ def load_active_trackings(supabase, handle):
     return [normalize_tracking(t, handle) for t in response.data or []]
 
 
-def build_markets(supabase, handle, now):
+def build_markets(supabase, handle, now, trackings):
     """Filtra mercados con ventana válida y precalcula su conteo actual."""
     markets = []
-    for tracking in load_active_trackings(supabase, handle):
+    for tracking in trackings:
         tid = tracking.get("id")
         if not tid:
             continue
@@ -112,10 +117,14 @@ def main():
     except Exception as err:
         print(f"   ⚠️ Sync falló ({err}); usando mercados guardados.")
 
-    markets = build_markets(supabase, handle, now)
+    trackings = load_active_trackings(supabase, handle)
+    markets = build_markets(supabase, handle, now, trackings)
     if not markets:
         print("😴 Sin mercados activos con ventana válida.")
         return
+    ensure_buckets(
+        supabase, [m["tracking"] for m in markets], write=True
+    )
     print(f"   📌 {len(markets)} mercados a vigilar.")
 
     # Paso 2: predicción inicial para mercados sin análisis

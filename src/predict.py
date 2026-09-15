@@ -15,7 +15,12 @@ from model import (
     parse_datetime,
     save_prediction,
 )
-from trackings import fetch_trackings, normalize_tracking, sync_trackings
+from trackings import (
+    ensure_buckets,
+    fetch_trackings,
+    normalize_tracking,
+    sync_trackings,
+)
 
 load_dotenv()
 
@@ -164,6 +169,8 @@ def main():
         if not trackings:
             print(f"❌ No se encontró el tracking {args.only}.")
             sys.exit(1)
+
+    trackings = ensure_buckets(supabase, trackings, write=not args.no_db)
 
     cutoff = now - timedelta(days=400)
     counts_by_date = fetch_daily_counts(supabase, args.handle, cutoff)

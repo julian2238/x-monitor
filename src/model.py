@@ -124,6 +124,36 @@ def build_bins():
     return bins
 
 
+def parse_bucket_label(label):
+    text = str(label).strip().replace(",", "")
+    if text.endswith("+"):
+        return (int(text[:-1]), None)
+    if text.startswith("<"):
+        return (0, int(text[1:]) - 1)
+    if "-" in text:
+        lo, hi = text.split("-", 1)
+        return (int(lo), int(hi))
+    n = int(text)
+    return (n, n)
+
+
+def buckets_from_labels(labels):
+    buckets = []
+    for label in labels:
+        lo, hi = parse_bucket_label(label)
+        buckets.append({"label": str(label).strip(), "min": lo, "max": hi})
+    buckets.sort(key=lambda b: b["min"] if b["min"] is not None else 10**12)
+    return buckets
+
+
+def resolve_bins(tracking, buckets=None):
+    if not buckets:
+        buckets = tracking.get("buckets") or (tracking.get("config") or {}).get("buckets")
+    if buckets:
+        return buckets
+    return build_bins()
+
+
 def bucket_probabilities(totals, bins):
     counts = [0] * len(bins)
     for total in totals:
@@ -169,6 +199,7 @@ def compute_prediction(
     half_life,
     seed=None,
     exceedance_thresholds=None,
+    buckets=None,
 ):
     title = tracking.get("title") or tracking["id"]
     start = parse_datetime(tracking.get("start_date"))
@@ -189,7 +220,7 @@ def compute_prediction(
     else:
         totals = [current_count] * sims
 
-    bins = build_bins()
+    bins = resolve_bins(tracking, buckets)
     probs, counts_arr = bucket_probabilities(totals, bins)
     pct = percentiles(totals)
 
